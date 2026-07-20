@@ -1,15 +1,12 @@
 name: Wake Lightning Studio
-
 on:
   workflow_dispatch:   # manual/API trigger only — no schedule
-
 jobs:
   wake:
     runs-on: ubuntu-latest
     steps:
       - name: Install Lightning SDK
         run: pip install lightning-sdk
-
       - name: Wake studio
         env:
           LIGHTNING_USER_ID: ${{ secrets.LIGHTNING_USER_ID }}
@@ -17,12 +14,12 @@ jobs:
         run: |
           python -c "
           from lightning_sdk import Studio, Status
-          studio = Studio(name='video-renderer', teamspace='data-optimization-project', user='team-8wppe')
+          studio = Studio(name='video-renderer', teamspace='data-optimization-project', org='team-8wppe')
           status = studio.status
           print(f'Current status: {status}')
-          if status == Status.Stopped:
-              studio.start()
-              print('Start triggered.')
+          if status == Status.Running:
+              print('Already running, skipping start.')
           else:
-              print('Not stopped, skipping start.')
+              studio.start()
+              print(f'Start triggered (was {status}).')
           "
