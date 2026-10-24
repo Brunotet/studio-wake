@@ -1,0 +1,27 @@
+name: Lightning GPU Probe
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - run: pip install lightning-sdk
+      - name: Probe
+        env:
+          LIGHTNING_USER_ID: ${{ secrets.LIGHTNING_USER_ID }}
+          LIGHTNING_API_KEY: ${{ secrets.LIGHTNING_API_KEY }}
+        run: |
+          python - <<'PY'
+          from lightning_sdk import Studio, Machine
+          print("Machines:", [m for m in dir(Machine) if not m.startswith('_')])
+          s = Studio(name='image-lab', teamspace='data-optimization-project', user='team-8wppe', create_ok=True)
+          try:
+              s.start(Machine.T4)
+              print("status:", s.status, "machine:", s.machine)
+              for cmd in ["nvidia-smi", "nvcc --version || echo no-nvcc", "python3 --version", "df -h ~ | tail -2", "free -h | head -2", "nproc"]:
+                  print("$", cmd); print(s.run(cmd))
+          finally:
+              s.stop()
+              print("stopped")
+          PY
