@@ -1,0 +1,42 @@
+name: Lightning GPU Probe 2
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - run: pip install lightning-sdk
+      - name: Probe
+        env:
+          LIGHTNING_USER_ID: ${{ secrets.LIGHTNING_USER_ID }}
+          LIGHTNING_API_KEY: ${{ secrets.LIGHTNING_API_KEY }}
+        run: |
+          python - <<'PY'
+          import traceback
+          from lightning_sdk import Studio, Machine, Teamspace
+          TS, US = 'data-optimization-project', 'team-8wppe'
+          try:
+              s0 = Studio(name='video-renderer', teamspace=TS, user=US)
+              print("existing studio OK, status:", s0.status, "machine:", s0.machine)
+          except Exception as e:
+              print("existing studio FAILED:", repr(e)[:300])
+          try:
+              t = Teamspace(name=TS, user=US)
+              print("teamspace OK; studios:", [x.name for x in t.studios])
+          except Exception as e:
+              print("teamspace FAILED:", repr(e)[:300])
+          try:
+              s = Studio(name='image-lab', teamspace=TS, user=US, create_ok=True)
+              print("image-lab OK, status:", s.status)
+          except Exception as e:
+              print("create FAILED:", repr(e)[:300]); traceback.print_exc(limit=3); raise SystemExit(0)
+          try:
+              s.start(Machine.T4)
+              print("machine:", s.machine)
+              for cmd in ["nvidia-smi", "nvcc --version || echo no-nvcc", "python3 --version", "df -h ~ | tail -2", "free -h | head -2", "nproc"]:
+                  print("$", cmd); print(s.run(cmd))
+          finally:
+              s.stop()
+              print("stopped")
+          PY
